@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lumo — AI Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <style>
+        /* ============================================================
+       VARIABLES & RESET
+       ============================================================ */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            /* Couleurs principales */
+            --bg-base: #0a0a0f;
+            /* fond ultra sombre */
+            --bg-surface: #111118;
+            /* surface principale */
+            --bg-sidebar: #0d0d14;
+            /* fond sidebar */
+            --bg-card: #16161f;
+            /* cartes / bulles IA */
+            --bg-input: #1a1a25;
+            /* zone de saisie */
+            --bg-hover: #1e1e2a;
+            /* hover */
+            --bg-user: #1a2a4a;
+            /* bulle utilisateur */
+
+            /* Texte */
+            --text-primary: #e8e8f0;
+            --text-secondary: #8888a8;
+            --text-muted: #44445a;
+
+            /* Accent */
+            --accent: #4f8eff;
+            --accent-dim: rgba(79, 142, 255, 0.12);
+            --accent-glow: rgba(79, 142, 255, 0.25);
+
+            /* Bordures */
+            --border: rgba(255, 255, 255, 0.06);
+            --border-active: rgba(79, 142, 255, 0.35);
+
+            /* Géométrie */
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --sidebar-w: 260px;
+
+            /* Transitions */
+            --ease: cubic-bezier(.4, 0, .2, 1);
+        }
+
+        html,
+        body {
+            height: 100%;
+            font-family: 'Sora', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        /* ============================================================
+       LAYOUT RACINE
+       ============================================================ */
+        .app {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* ============================================================
+       SIDEBAR
+       ============================================================ */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: transform 0.3s var(--ease);
+            z-index: 100;
+        }
+
+        /* Logo en haut de la sidebar */
+        .sidebar-logo {
+            padding: 22px 18px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-logo .logo-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+        }
+
+        .sidebar-logo span {
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            color: var(--text-primary);
+        }
+
+        /* Bouton nouveau chat */
+        .btn-new-chat {
+            margin: 14px 12px;
+            padding: 11px 14px;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-active);
+            border-radius: var(--radius-md);
+            color: var(--accent);
+            font-family: 'Sora', sans-serif;
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            transition: background 0.2s var(--ease), box-shadow 0.2s var(--ease);
+            width: calc(100% - 24px);
+        }
+
+        .btn-new-chat:hover {
+            background: rgba(79, 142, 255, 0.2);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        /* Section historique */
+        .sidebar-section-title {
+            padding: 10px 18px 6px;
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 8px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--bg-hover) transparent;
+        }
+
+        /* Item historique */
+        .history-item {
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .history-item.active {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .history-item .item-icon {
+            font-size: 14px;
+            flex-shrink: 0;
+            opacity: 0.6;
+        }
+
+        /* Bas de sidebar — paramètres */
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .sidebar-footer-btn {
+            width: 100%;
+            padding: 10px 12px;
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-family: 'Sora', sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            transition: background 0.15s, color 0.15s;
+            text-align: left;
+        }
+
+        .sidebar-footer-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        /* ============================================================
+       ZONE PRINCIPALE
+       ============================================================ */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: var(--bg-surface);
+            position: relative;
+        }
+
+        /* ---- HEADER ---- */
+        .header {
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            background: rgba(17, 17, 24, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Bouton burger (mobile) */
+        .btn-menu {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 20px;
+            padding: 4px;
+        }
+
+        .header-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.2px;
+        }
+
+        /* Badge modèle */
+
+
+        /* Indicateur connexion */
+        .status-dot {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .status-dot a{
+            background: #111118;
+            color: white;
+            text-decoration: none;
+            padding: 5px;
+            border-radius: 13px;
+        }
+        .status-dot a:hover{
+            background: white;
+            color: black;
+        }
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #d33434;
+            box-shadow: 0 0 8px rgba(211, 52, 52, 0.6);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        /* ---- ZONE MESSAGES ---- */
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--bg-hover) transparent;
+        }
+
+        .messages-area::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .messages-area::-webkit-scrollbar-thumb {
+            background: var(--bg-hover);
+            border-radius: 4px;
+        }
+
+        /* Conteneur centré */
+        .messages-inner {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Écran de bienvenue */
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 60px 20px;
+            gap: 20px;
+            animation: fadeUp 0.5s var(--ease) both;
+        }
+
+        .welcome-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 100%);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            box-shadow: 0 0 40px var(--accent-glow);
+        }
+
+        .welcome-title {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #fff 30%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .welcome-sub {
+            font-size: 14px;
+            color: var(--text-secondary);
+            max-width: 360px;
+            line-height: 1.7;
+        }
+
+        /* Suggestions rapides */
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .suggestion-chip {
+            padding: 9px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s var(--ease);
+        }
+
+        .suggestion-chip:hover {
+            border-color: var(--border-active);
+            color: var(--text-primary);
+            background: var(--bg-hover);
+            transform: translateY(-1px);
+        }
+
+        /* ---- MESSAGES ---- */
+        .message {
+            display: flex;
+            gap: 12px;
+            animation: fadeUp 0.3s var(--ease) both;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Avatar */
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .avatar-ai {
+            background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 100%);
+            color: white;
+            font-size: 14px;
+        }
+
+        .avatar-user {
+            background: var(--bg-user);
+            border: 1px solid rgba(79, 142, 255, 0.3);
+            color: var(--accent);
+            font-size: 12px;
+        }
+
+        /* Contenu du message */
+        .message-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .message-sender {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .message-bubble {
+            padding: 13px 16px;
+            border-radius: var(--radius-md);
+            font-size: 14.5px;
+            line-height: 1.75;
+            color: var(--text-primary);
+            max-width: 100%;
+            word-break: break-word;
+        }
+
+        /* Bulle IA */
+        .message-ai .message-bubble {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px var(--radius-md) var(--radius-md) var(--radius-md);
+        }
+
+        /* Bulle utilisateur — alignée à droite */
+        .message-user {
+            flex-direction: row-reverse;
+        }
+
+        .message-user .message-body {
+            text-align: right;
+        }
+
+        .message-user .message-bubble {
+            background: var(--bg-user);
+            border: 1px solid rgba(79, 142, 255, 0.2);
+            border-radius: var(--radius-md) 4px var(--radius-md) var(--radius-md);
+            display: inline-block;
+            text-align: left;
+        }
+
+        /* Indicateur "en train d'écrire" */
+        .typing-indicator .message-bubble {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 14px 18px;
+        }
+
+        .typing-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: typing 1.2s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0.7);
+                opacity: 0.4;
+            }
+
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* ---- INPUT ---- */
+        .input-area {
+            flex-shrink: 0;
+            padding: 16px 24px 20px;
+            background: linear-gradient(to top, var(--bg-surface) 60%, transparent);
+        }
+
+        .input-wrapper {
+            max-width: 760px;
+            margin: 0 auto;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            padding: 10px 10px 10px 16px;
+            transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--border-active);
+            box-shadow: 0 0 0 3px var(--accent-dim), 0 4px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Zone de texte auto-resize */
+        #user-input {
+            flex: 1;
+            background: none;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-family: 'Sora', sans-serif;
+            font-size: 14.5px;
+            line-height: 1.6;
+            resize: none;
+            max-height: 160px;
+            min-height: 24px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            padding: 2px 0;
+        }
+
+        #user-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Bouton envoyer */
+        .btn-send {
+            width: 45px;
+            height: 45px;
+            background: var(--accent);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+            font-size: 20px;
+        }
+
+        .btn-send:hover {
+            background: #6ba3ff;
+            box-shadow: 0 0 16px var(--accent-glow);
+            transform: scale(1.05);
+        }
+
+        .btn-send:active {
+            transform: scale(0.95);
+        }
+
+        .btn-send:disabled {
+            background: var(--bg-hover);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Texte en bas */
+        .input-hint {
+            text-align: center;
+            font-size: 11.5px;
+            color: #a5a5ad;
+            margin-top: 10px;
+        }
+
+        /* ============================================================
+       OVERLAY MOBILE
+       ============================================================ */
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 99;
+        }
+
+        /* ============================================================
+       RESPONSIVE
+       ============================================================ */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .overlay.show {
+                display: block;
+            }
+
+            .btn-menu {
+                display: flex;
+            }
+
+            .messages-inner {
+                padding: 0 14px;
+            }
+
+            .input-area {
+                padding: 12px 14px 16px;
+            }
+
+            .welcome-title {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ========== OVERLAY MOBILE ========== -->
+    <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+    <!-- ========== APP ROOT ========== -->
+    <div class="app">
+
+        <!-- ===== SIDEBAR ===== -->
+        <aside class="sidebar" id="sidebar">
+
+            <!-- Logo -->
+            <div class="sidebar-logo">
+                <div class="logo-icon">✦</div>
+                <span>Lumo</span>
+            </div>
+
+            <!-- Nouveau chat -->
+            <button class="btn-new-chat" onclick="newChat()">
+                <span>＋</span>
+                Nouvelle conversation
+            </button>
+
+            <!-- Historique -->
+            <div class="sidebar-section-title">Historique</div>
+            <div class="history-list" id="history-list">
+                <!-- rempli dynamiquement par JS -->
+            </div>
+
+            <!-- Footer sidebar -->
+            <div class="sidebar-footer">
+                <button class="sidebar-footer-btn">
+                    <span>⚙️</span> Paramètres
+                </button>
+                <button class="sidebar-footer-btn">
+                    <span>🌐</span> LM Studio · Local
+                </button>
+            </div>
+
+        </aside>
+
+        <!-- ===== ZONE PRINCIPALE ===== -->
+        <main class="main">
+
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <!-- Bouton menu burger (mobile uniquement) -->
+                    <button class="btn-menu" onclick="openSidebar()">☰</button>
+                    <span class="header-title">Lumo AI</span>
+                    
+                </div>
+                <div class="status-dot">
+                    <div class="dot"></div>
+                <a href="index.html">
+                    ↪ Login
+                </a>
+                </div>
+            </header>
+
+            <!-- Zone messages -->
+            <div class="messages-area" id="messages-area">
+                <div class="messages-inner" id="messages-inner">
+
+                    <!-- Écran de bienvenue (masqué dès le premier message) -->
+                    <div class="welcome-screen" id="welcome-screen">
+                        <div class="welcome-icon">✦</div>
+                        <h1 class="welcome-title">Bonjour, je suis Lumo</h1>
+                        <p class="welcome-sub">
+                            Pose-moi n'importe quelle question.
+                        </p>
+                        <div class="suggestions">
+                            <button class="suggestion-chip"
+                                onclick="fillInput('Explique-moi le machine learning simplement')">
+                                🧠 C'est quoi le machine learning ?
+                            </button>
+                            <button class="suggestion-chip"
+                                onclick="fillInput('Écris un exemple de code Python pour une API REST')">
+                                💻 Exemple d'API REST en Python
+                            </button>
+                            <button class="suggestion-chip"
+                                onclick="fillInput('Quels sont les meilleurs frameworks CSS en 2025 ?')">
+                                🎨 Meilleurs frameworks CSS 2025
+                            </button>
+                            <button class="suggestion-chip"
+                                onclick="fillInput('Comment fonctionne Django en 5 points ?')">
+                                🚀 Django en 5 points
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Zone input -->
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea id="user-input" rows="1" placeholder="Envoie un message…" aria-label="Message"></textarea>
+                    <button class="btn-send" id="btn-send" onclick="sendMessage()" title="Envoyer (Entrée)">
+                        ↑
+                    </button>
+                </div>
+                <p class="input-hint">Entrée pour envoyer · Shift+Entrée pour un saut de ligne</p>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+    <script>
+
+        /* ----------------------------------------------------------
+           ÉTAT DE L'APPLICATION
+           ---------------------------------------------------------- */
+        let conversationHistory = [];   // historique complet pour LangChain
+        let sessionList = [];           // liste des conversations (sidebar)
+        let currentSessionId = null;    // conversation active
+
+
+        /* ----------------------------------------------------------
+           FONCTIONS SIDEBAR
+           ---------------------------------------------------------- */
+
+        /** Ouvre la sidebar (mobile) */
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('overlay').classList.add('show');
+        }
+
+        /** Ferme la sidebar (mobile) */
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('overlay').classList.remove('show');
+        }
+
+        /** Démarre une nouvelle conversation */
+        function newChat() {
+            conversationHistory = [];
+            document.getElementById('messages-inner').innerHTML = '';
+            document.getElementById('messages-inner').appendChild(
+                document.getElementById('welcome-screen') || createWelcome()
+            );
+            // Recrée l'écran de bienvenue proprement
+            const inner = document.getElementById('messages-inner');
+            inner.innerHTML = getWelcomeHTML();
+            closeSidebar();
+        }
+
+        /** Ajoute une entrée dans l'historique sidebar */
+        function addToSidebarHistory(firstMessage) {
+            const list = document.getElementById('history-list');
+
+            // Retire le statut "active" des anciens items
+            list.querySelectorAll('.history-item').forEach(i => i.classList.remove('active'));
+
+            const item = document.createElement('div');
+            item.className = 'history-item active';
+            item.innerHTML = `<span class="item-icon">💬</span>${firstMessage.slice(0, 34)}${firstMessage.length > 34 ? '…' : ''}`;
+            list.insertBefore(item, list.firstChild);
+        }
+
+
+        /* ----------------------------------------------------------
+           RENDU DES MESSAGES
+           ---------------------------------------------------------- */
+
+        /**
+         * Crée et affiche un message dans la zone de chat.
+         * @param {'user'|'ai'} role
+         * @param {string} text
+         */
+        function appendMessage(role, text) {
+            // Cache l'écran de bienvenue au premier message
+            const welcome = document.getElementById('welcome-screen');
+            if (welcome) welcome.remove();
+
+            const inner = document.getElementById('messages-inner');
+            const div = document.createElement('div');
+            div.className = `message message-${role}`;
+
+            if (role === 'ai') {
+                div.innerHTML = `
+        <div class="avatar avatar-ai">✦</div>
+        <div class="message-body">
+          <div class="message-sender">Lumo</div>
+          <div class="message-bubble">${escapeHTML(text)}</div>
+        </div>`;
+            } else {
+                div.innerHTML = `
+        <div class="avatar avatar-user">Toi</div>
+        <div class="message-body">
+          <div class="message-sender">Vous</div>
+          <div class="message-bubble">${escapeHTML(text)}</div>
+        </div>`;
+            }
+
+            inner.appendChild(div);
+            scrollToBottom();
+            return div;
+        }
+
+        /** Affiche les 3 points "IA en train d'écrire..." */
+        function showTypingIndicator() {
+            const inner = document.getElementById('messages-inner');
+            const div = document.createElement('div');
+            div.className = 'message message-ai typing-indicator';
+            div.id = 'typing-indicator';
+            div.innerHTML = `
+      <div class="avatar avatar-ai">✦</div>
+      <div class="message-body">
+        <div class="message-sender">Lumo</div>
+        <div class="message-bubble">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>`;
+            inner.appendChild(div);
+            scrollToBottom();
+        }
+
+        /** Supprime l'indicateur de frappe */
+        function removeTypingIndicator() {
+            const el = document.getElementById('typing-indicator');
+            if (el) el.remove();
+        }
+
+        /** Scroll doux vers le bas */
+        function scrollToBottom() {
+            const area = document.getElementById('messages-area');
+            area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
+        }
+
+
+        /* ----------------------------------------------------------
+           ENVOI DU MESSAGE — CŒUR DE L'APPLICATION
+           ---------------------------------------------------------- */
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Premier message ? On l'ajoute à la sidebar
+            if (conversationHistory.length === 0) {
+                addToSidebarHistory(text);
+            }
+
+            // Affiche le message utilisateur
+            appendMessage('user', text);
+            input.value = '';
+            autoResize(input);   // remet la hauteur du textarea
+
+            // Ajoute au contexte LangChain
+            conversationHistory.push({ role: 'user', content: text });
+
+            // Désactive le bouton pendant la requête
+            setBtnState(true);
+            showTypingIndicator();
+
+            try {
+                // Appel à Django (qui appelle LangChain → LM Studio)
+                const response = await fetch('/send/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')    // obligatoire avec Django
+                    },
+                    body: JSON.stringify({
+                        message: text,
+                        history: conversationHistory
+                    })
+                });
+
+                const data = await response.json();
+
+                removeTypingIndicator();
+                appendMessage('ai', data.response);
+
+                // Ajoute la réponse IA à l'historique
+                conversationHistory.push({ role: 'ai', content: data.response });
+
+            } catch (error) {
+                // En cas d'erreur réseau ou serveur
+                removeTypingIndicator();
+                appendMessage('ai', '⚠️ Erreur de connexion. Vérifie que LM Studio et Django tournent bien.');
+                console.error('Erreur fetch:', error);
+            }
+
+            setBtnState(false);
+            input.focus();
+        }
+
+
+        /* ----------------------------------------------------------
+           UTILITAIRES
+           ---------------------------------------------------------- */
+
+        /** Active ou désactive le bouton envoyer */
+        function setBtnState(loading) {
+            const btn = document.getElementById('btn-send');
+            btn.disabled = loading;
+            btn.textContent = loading ? '…' : '↑';
+        }
+
+        /** Rempli l'input avec un texte (suggestions) */
+        function fillInput(text) {
+            const input = document.getElementById('user-input');
+            input.value = text;
+            input.focus();
+            autoResize(input);
+        }
+
+        /** Auto-resize du textarea */
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+        }
+
+        /** Échappe le HTML pour éviter les injections */
+        function escapeHTML(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\n/g, '<br>');
+        }
+
+        /** Lit un cookie par son nom (pour le CSRF Django) */
+        function getCookie(name) {
+            return document.cookie.split(';')
+                .find(c => c.trim().startsWith(name + '='))
+                ?.split('=')[1] ?? '';
+        }
+
+        /** HTML de l'écran de bienvenue (pour newChat) */
+        function getWelcomeHTML() {
+            return `
+      <div class="welcome-screen" id="welcome-screen">
+        <div class="welcome-icon">✦</div>
+        <h1 class="welcome-title">Bonjour, je suis Lumo</h1>
+        <p class="welcome-sub">Ton assistant IA local propulsé par LM Studio.<br>Pose-moi n'importe quelle question.</p>
+        <div class="suggestions">
+          <button class="suggestion-chip" onclick="fillInput('Explique-moi le machine learning simplement')">🧠 C'est quoi le machine learning ?</button>
+          <button class="suggestion-chip" onclick="fillInput('Écris un exemple de code Python pour une API REST')">💻 Exemple d'API REST en Python</button>
+          <button class="suggestion-chip" onclick="fillInput('Quels sont les meilleurs frameworks CSS en 2025 ?')">🎨 Meilleurs frameworks CSS 2025</button>
+          <button class="suggestion-chip" onclick="fillInput('Comment fonctionne Django en 5 points ?')">🚀 Django en 5 points</button>
+        </div>
+      </div>`;
+        }
+
+
+        /* ----------------------------------------------------------
+           ÉVÉNEMENTS CLAVIER
+           ---------------------------------------------------------- */
+
+        document.getElementById('user-input').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();   // empêche le saut de ligne
+                sendMessage();
+            }
+        });
+
+        // Auto-resize du textarea à chaque frappe
+        document.getElementById('user-input').addEventListener('input', function () {
+            autoResize(this);
+        });
+
+    </script>
+</body>
+
+</html>
