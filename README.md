@@ -1,6 +1,3 @@
-Parfait, là ton projet est déjà plus “pro” que ce que j’avais écrit au début. Je t’ai fait un **README adapté à TON projet Lumo AI (Django + LangChain + frontend HTML/CSS/JS)** 👇
-
----
 
 # 🤖 Lumo AI
 
