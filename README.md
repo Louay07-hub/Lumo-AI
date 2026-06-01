@@ -136,5 +136,5 @@ Lumo AI : Salut 👋 Comment puis-je t’aider aujourd’hui ?
 ## 👤 Auteur
 
 **Lumo AI Project**
-GitHub : [https://github.com/ton-utilisateur](https://github.com/Louay07-hub)
+GitHub : [https://github.com/Louay07-hub](https://github.com/Louay07-hub)
 
